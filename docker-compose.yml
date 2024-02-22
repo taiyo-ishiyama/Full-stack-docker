@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  my-shop-app:
+    container_name: online-shop-app
+    image: online-shop-app
+    build: .
+    depends_on:
+      - mongo
+    ports:
+      - "3000:3000"
+    networks:
+      - frontend
+      - backend
+  mongo-express:
+    container_name: mongo-express
+    image: mongo-express
+    restart: always
+    build: ./docker/gui
+    depends_on:
+      - mongo
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      #- ME_CONFIG_MONGODB_ADMINUSERNAME=root
+      #- ME_CONFIG_MONGODB_ADMINPASSWORD=example
+      - ME_CONFIG_MONGODB_URL=mongodb://mongo:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=username1234
+      - ME_CONFIG_BASICAUTH_PASSWORD=password1234
+    volumes:
+      - mongodata:/data/db
+    networks:
+      - frontend
+      - backend
+  mongo:
+    container_name: mongo
+    image: mongo
+    restart: always
+    build: ./docker/back-end
+    volumes:
+      - mongodata:/data/db
+    ports:
+      - "27017:27017"
+    #environment:
+      #- MONGO_INITDB_ROOT_USERNAME=root
+      #- MONGO_INITDB_ROOT_PASSWORD=example
+    networks:
+      - frontend
+      - backend
+  proxy:
+    container_name: proxy
+    image: proxy
+    build: ./docker/proxy
+   depends_on:
+     - my-shop-app
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl/localhost.crt:/etc/ssl/certs/localhost.crt:ro
+      - ./ssl/localhost.key:/etc/ssl/private/localhost.key:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    networks:
+      - frontend
+      - backend
+      
+volumes:
+  mongodata:
+
+networks:
+  frontend:
+  backend:
+    internal: true
+
